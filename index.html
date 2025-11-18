@@ -3,92 +3,485 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HTML5 3D Cube</title>
-    
+    <title>Pixel Snake Game</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
         body {
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
+            justify-content: center;
             min-height: 100vh;
             margin: 0;
-            background-color: #f0f0f0;
-            /* Creates the 3D viewing perspective */
-            perspective: 1000px; 
-            overflow: hidden; /* Hide scrollbars just in case */
+            background-color: #1a1a1a;
+            color: #fff;
+            font-family: 'VT323', monospace;
+            padding: 20px;
+            box-sizing: border-box;
         }
 
-        #scene {
-            width: 200px;
-            height: 200px;
+        h1 {
+            color: #4CAF50; /* Neon green tone */
+            font-size: 3rem;
+            text-shadow: 0 0 5px #4CAF50;
+            margin-bottom: 0.5rem;
         }
 
-        #cube {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            /* **THE KEY:** Makes child elements (faces) exist in 3D space */
-            transform-style: preserve-3d; 
-            transition: transform 0.1s; /* For smooth spinning updates */
+        #game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #282c34;
+            padding: 20px;
+            border: 8px solid #4CAF50;
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.8), 0 0 40px rgba(76, 175, 80, 0.4);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            max-width: 100%; /* Ensure responsiveness */
         }
 
-        .face {
+        #gameCanvas {
+            border: 4px solid #1a1a1a;
+            background-color: #333;
+            /* Default size, adjusted by JS for responsiveness */
+        }
+
+        #score-board {
+            font-size: 2rem;
+            color: #ffeb3b;
+            text-shadow: 0 0 5px #ffeb3b;
+            margin: 10px 0;
+        }
+
+        #start-button {
+            padding: 10px 20px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: #1a1a1a;
+            border: none;
+            border-radius: 5px;
+            box-shadow: 0 4px #2e7d32;
+            transition: all 0.1s;
+            font-family: 'VT323', monospace;
+            margin-top: 10px;
+        }
+
+        #start-button:active {
+            box-shadow: 0 2px #2e7d32;
+            transform: translateY(2px);
+        }
+
+        #message-box {
             position: absolute;
-            width: 200px;
-            height: 200px;
-            border: 1px solid #333;
-            line-height: 200px;
-            font-size: 24px;
-            font-family: sans-serif;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.85);
+            padding: 30px;
+            border-radius: 10px;
             text-align: center;
-            color: white;
-            opacity: 0.9;
-            backface-visibility: hidden; /* Helps prevent flickering */
+            border: 3px solid #ff0000;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.9);
+            z-index: 10;
+            font-size: 1.8rem;
+            display: none;
         }
 
-        /* Position and rotate each face into a cube shape */
-        .front  { background: #E74C3C; transform: translateZ(100px); }
-        .back   { background: #3498DB; transform: rotateX(180deg) translateZ(100px); }
-        .right  { background: #27AE60; transform: rotateY(90deg) translateZ(100px); }
-        .left   { background: #F39C12; transform: rotateY(-90deg) translateZ(100px); }
-        .top    { background: #9B59B6; transform: rotateX(90deg) translateZ(100px); }
-        .bottom { background: #1ABC9C; transform: rotateX(-90deg) translateZ(100px); }
+        #message-box h2 {
+            margin-top: 0;
+            color: #ff0000;
+            text-shadow: 0 0 5px #ff0000;
+        }
+
+        #controls {
+            display: none; /* Only show on small screens */
+            grid-template-areas: ". up ." "left . right" ". down .";
+            gap: 10px;
+            width: 100%;
+            max-width: 300px;
+            margin-top: 20px;
+        }
+        
+        .control-button {
+            grid-area: var(--area);
+            padding: 15px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            background-color: #333;
+            color: #4CAF50;
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            transition: background-color 0.1s;
+            line-height: 1;
+            user-select: none;
+        }
+
+        .control-button:active {
+            background-color: #4CAF50;
+            color: #1a1a1a;
+        }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 2rem; }
+            #game-container { padding: 10px; }
+            #score-board { font-size: 1.5rem; }
+            #start-button { font-size: 1.2rem; }
+            #controls { display: grid; }
+            #message-box { font-size: 1.2rem; }
+        }
     </style>
 </head>
 <body>
-    
-    <div id="scene">
-        <div id="cube">
-            <div class="face front">Front</div>
-            <div class="face back">Back</div>
-            <div class="face right">Right</div>
-            <div class="face left">Left</div>
-            <div class="face top">Top</div>
-            <div class="face bottom">Bottom</div>
-        </div>
+
+    <h1>Pixel Snake</h1>
+
+    <div id="game-container">
+        <div id="score-board">Score: 0</div>
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <button id="start-button">Start Game</button>
+
+    <div id="controls">
+        <div class="control-button" style="--area: up;" data-direction="UP">▲</div>
+        <div class="control-button" style="--area: left;" data-direction="LEFT">◀</div>
+        <div class="control-button" style="--area: right;" data-direction="RIGHT">▶</div>
+        <div class="control-button" style="--area: down;" data-direction="DOWN">▼</div>
+    </div>
+
+    <div id="message-box">
+        <h2 id="message-title">Game Over!</h2>
+        <p id="message-score"></p>
+        <p>Press START to play again!</p>
     </div>
 
     <script>
-        const cube = document.getElementById('cube');
-        let rotationX = 0;
-        let rotationY = 0;
+        // --- Firebase Configuration (Required for all Canvas Apps) ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        // The main game loop function
-        function animate() {
-            // Increase the rotation values slightly each frame
-            rotationX += 0.5; 
-            rotationY += 0.5;
+        // Since this is a single-player game and does not require persistence, we will skip
+        // the full Firestore setup to keep the code focused on the game logic.
+        // If high scores were required, Firestore would be implemented here.
 
-            // Apply the new 3D rotation using CSS transform
-            cube.style.transform = `rotateX(${rotationX}deg) rotateY(${rotationY}deg)`;
+        // --- Game Constants ---
+        const TILE_SIZE = 20;
+        const TILE_COUNT = 20;
+        const CANVAS_SIZE = TILE_SIZE * TILE_COUNT;
+        const INITIAL_SPEED = 150; // milliseconds per frame
+
+        // --- Game State Variables ---
+        let canvas, ctx;
+        let snake;
+        let food;
+        let score;
+        let direction;
+        let nextDirection; // Buffer for quick directional changes
+        let gameRunning;
+        let gameLoopInterval;
+        let currentSpeed;
+
+        // --- Touch State for Swipe Detection ---
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        // --- DOM Elements ---
+        const scoreBoard = document.getElementById('score-board');
+        const startButton = document.getElementById('start-button');
+        const messageBox = document.getElementById('message-box');
+        const messageTitle = document.getElementById('message-title');
+        const messageScore = document.getElementById('message-score');
+
+        // --- Initialization on Window Load ---
+        window.onload = function () {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+
+            // Set the canvas size and ensure it's a square
+            canvas.width = CANVAS_SIZE;
+            canvas.height = CANVAS_SIZE;
+
+            startButton.addEventListener('click', startGame);
+
+            // Add input listeners
+            document.addEventListener('keydown', handleKeyPress);
+            canvas.addEventListener('touchstart', handleTouchStart, false);
+            canvas.addEventListener('touchend', handleTouchEnd, false);
             
-            // Tells the browser to run this function again before the next repaint
-            requestAnimationFrame(animate);
+            // Add listeners for on-screen controls
+            document.querySelectorAll('.control-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    handleTouchControl(button.getAttribute('data-direction'));
+                });
+            });
+
+            // Draw initial screen
+            drawBackground();
+            messageTitle.textContent = "Welcome to Pixel Snake!";
+            messageScore.textContent = "Click Start to begin.";
+            messageBox.style.display = 'block';
+        };
+
+        // --- Game Logic Functions ---
+
+        /**
+         * Resets and starts the game.
+         */
+        function startGame() {
+            // Initial state setup
+            score = 0;
+            currentSpeed = INITIAL_SPEED;
+            direction = 'RIGHT';
+            nextDirection = 'RIGHT';
+            gameRunning = true;
+            messageBox.style.display = 'none';
+            startButton.textContent = "Restart Game";
+
+            // Initial snake position (start in the middle-left)
+            snake = [
+                { x: 5, y: 10 },
+                { x: 4, y: 10 },
+                { x: 3, y: 10 }
+            ];
+
+            generateFood();
+            updateScore();
+
+            // Clear any existing interval and start new game loop
+            if (gameLoopInterval) {
+                clearInterval(gameLoopInterval);
+            }
+            gameLoopInterval = setInterval(gameLoop, currentSpeed);
         }
 
-        // Start the continuous animation loop
-        animate();
-    </script>
+        /**
+         * The main game loop function.
+         */
+        function gameLoop() {
+            if (!gameRunning) return;
 
+            // Apply the next buffered direction
+            direction = nextDirection;
+
+            // 1. Move the snake (create new head)
+            const head = { x: snake[0].x, y: snake[0].y };
+
+            switch (direction) {
+                case 'UP': head.y -= 1; break;
+                case 'DOWN': head.y += 1; break;
+                case 'LEFT': head.x -= 1; break;
+                case 'RIGHT': head.x += 1; break;
+            }
+
+            // 2. Check collisions
+            if (isCollision(head)) {
+                gameOver();
+                return;
+            }
+
+            // Add new head to the front
+            snake.unshift(head);
+
+            // 3. Check for food
+            if (head.x === food.x && head.y === food.y) {
+                score++;
+                updateScore();
+                generateFood();
+                increaseSpeed();
+                // Don't pop the tail, making the snake grow
+            } else {
+                // Remove the tail only if food was NOT eaten
+                snake.pop();
+            }
+
+            // 4. Draw the new state
+            drawGame();
+        }
+
+        /**
+         * Checks if the new head position results in a collision.
+         * @param {object} head - The new head position {x, y}.
+         * @returns {boolean} - True if collision occurs.
+         */
+        function isCollision(head) {
+            // Wall collision
+            if (head.x < 0 || head.x >= TILE_COUNT || head.y < 0 || head.y >= TILE_COUNT) {
+                return true;
+            }
+            // Self collision (check against the rest of the body)
+            for (let i = 1; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /**
+         * Generates a new random position for the food, ensuring it's not on the snake.
+         */
+        function generateFood() {
+            let newFood;
+            let onSnake;
+            do {
+                onSnake = false;
+                newFood = {
+                    x: Math.floor(Math.random() * TILE_COUNT),
+                    y: Math.floor(Math.random() * TILE_COUNT)
+                };
+                for (let i = 0; i < snake.length; i++) {
+                    if (newFood.x === snake[i].x && newFood.y === snake[i].y) {
+                        onSnake = true;
+                        break;
+                    }
+                }
+            } while (onSnake);
+
+            food = newFood;
+        }
+
+        /**
+         * Increases the game speed as the score increases.
+         */
+        function increaseSpeed() {
+            // Speed up every 5 points, capping at 50ms
+            if (score % 5 === 0 && currentSpeed > 50) {
+                currentSpeed -= 10;
+                clearInterval(gameLoopInterval);
+                gameLoopInterval = setInterval(gameLoop, currentSpeed);
+            }
+        }
+
+        /**
+         * Updates the score display.
+         */
+        function updateScore() {
+            scoreBoard.textContent = `Score: ${score}`;
+        }
+
+        /**
+         * Handles the game over state.
+         */
+        function gameOver() {
+            gameRunning = false;
+            clearInterval(gameLoopInterval);
+
+            messageTitle.textContent = "GAME OVER!";
+            messageScore.textContent = `Final Score: ${score}`;
+            messageBox.style.display = 'block';
+        }
+
+
+        // --- Drawing Functions ---
+
+        /**
+         * Clears the canvas and draws the background.
+         */
+        function drawBackground() {
+            ctx.fillStyle = '#333';
+            ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+        }
+
+        /**
+         * Draws the entire game state (snake and food).
+         */
+        function drawGame() {
+            drawBackground();
+
+            // Draw food (red block)
+            ctx.fillStyle = '#FF4500'; // Orange-Red
+            ctx.shadowColor = '#FF0000';
+            ctx.shadowBlur = 15;
+            ctx.fillRect(food.x * TILE_SIZE, food.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            ctx.shadowBlur = 0; // Reset shadow
+
+            // Draw snake (green blocks)
+            for (let i = 0; i < snake.length; i++) {
+                ctx.fillStyle = (i === 0) ? '#4CAF50' : '#8BC34A'; // Head is brighter green
+                ctx.fillRect(snake[i].x * TILE_SIZE, snake[i].y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                
+                // Add a small border/outline for 'pixel' effect
+                ctx.strokeStyle = '#1a1a1a';
+                ctx.strokeRect(snake[i].x * TILE_SIZE, snake[i].y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            }
+        }
+
+
+        // --- Input Handling ---
+
+        /**
+         * Handles keyboard input for directional changes.
+         */
+        function handleKeyPress(event) {
+            if (!gameRunning) return;
+
+            let newDir = null;
+            const key = event.key;
+
+            if (key === 'ArrowUp' || key === 'w') newDir = 'UP';
+            else if (key === 'ArrowDown' || key === 's') newDir = 'DOWN';
+            else if (key === 'ArrowLeft' || key === 'a') newDir = 'LEFT';
+            else if (key === 'ArrowRight' || key === 'd') newDir = 'RIGHT';
+            
+            setNewDirection(newDir);
+        }
+
+        /**
+         * Sets the new direction, preventing immediate 180-degree turns.
+         * @param {string | null} newDir - The requested direction.
+         */
+        function setNewDirection(newDir) {
+            if (!newDir) return;
+
+            // Prevent reversing direction
+            if ((newDir === 'UP' && direction !== 'DOWN') ||
+                (newDir === 'DOWN' && direction !== 'UP') ||
+                (newDir === 'LEFT' && direction !== 'RIGHT') ||
+                (newDir === 'RIGHT' && direction !== 'LEFT')) {
+                
+                nextDirection = newDir;
+            }
+        }
+
+        // --- Touch/Mobile Controls (Swipe Detection) ---
+
+        function handleTouchStart(event) {
+            if (event.touches.length === 1) {
+                touchStartX = event.touches[0].clientX;
+                touchStartY = event.touches[0].clientY;
+            }
+        }
+
+        function handleTouchEnd(event) {
+            if (!gameRunning || event.changedTouches.length !== 1) return;
+            
+            const touchEndX = event.changedTouches[0].clientX;
+            const touchEndY = event.changedTouches[0].clientY;
+
+            const dx = touchEndX - touchStartX;
+            const dy = touchEndY - touchStartY;
+            
+            // Determine if it was a significant swipe
+            const threshold = 15;
+
+            if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > threshold) {
+                // Horizontal swipe
+                setNewDirection(dx > 0 ? 'RIGHT' : 'LEFT');
+            } else if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > threshold) {
+                // Vertical swipe
+                setNewDirection(dy > 0 ? 'DOWN' : 'UP');
+            }
+        }
+
+        // --- Touch/Mobile Controls (On-screen Buttons) ---
+        function handleTouchControl(dir) {
+            if (!gameRunning) return;
+            setNewDirection(dir);
+        }
+
+    </script>
 </body>
 </html>
